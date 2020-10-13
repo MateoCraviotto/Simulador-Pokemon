@@ -2,15 +2,18 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #define LECTURA "r"
+#define ESCRITURA "w"
 const int SIN_POKEMONES = 0;
 const int LEIDOS_ESPERADOS = 4;
 #define FORMATO_LECTURA_ARRECIFE "%[^;];%i;%i;%[^\n]\n"
+#define FORMATO_ESCRITURA_ACUARIO "%s;%i;%i;%s\n"
+
 const int ERROR = -1;
 const int EXITO = 0;
 
 /*
-* Pre: El archivo debe estar abierto en modo LECTURA. El vector de pokemones 
-	no debe estar inicializado.
+* Pre: El archivo debe estar abierto en modo LECTURA y ser de texto. El vector 
+	de pokemones no debe estar inicializado.
 * Post: Lee los pokemones del archivo, con el formato FORMATO_LECTURA_ARRECIFE, 
 	y los almacena  en el vector recibido. Devuelve la cantidad de pokemones leidos 
 	y almacenados en el vector. Si no pudo leer ninguno, devuelve 0.
@@ -69,6 +72,8 @@ void guardar_pokemones_en_arrecife(arrecife_t* arrecife, pokemon_t pokemones[]) 
 	}
 }
 */
+
+
 // FUNCIÓN PÚBLICA
 arrecife_t* crear_arrecife(const char* ruta_archivo) {
 
@@ -139,20 +144,21 @@ bool hay_pokemones_suficientes(arrecife_t* arrecife, bool (*seleccionar_pokemon)
 
 /*
 * Pre: El arrecife y el acuario deben estar inicializados y ser válidos. "pos" representa
-	la posición del pokemon en el arrecife que se quiere mover.
-* Post: Mueve el pokemon de la posición del arrecife recibida al acuario. Si lo logra, devuelve
+	la posición del pokemon en el arrecife que se quiere mover.////////////////////////////////////////////////////////////////////////////////////////////////////////
+* Post: Mueve el pokemon de la posición del arrecife recibida al acuario. Si lo logra, devuelve/////////////////////////////////////////////////////////////////
 	true. En caso de error, devuelve false.
 */
 bool mover_pokemon(arrecife_t* arrecife, acuario_t* acuario, int pos) {
 	pokemon_t* pokemon_aux;
 	bool pokemon_movido = false;
-	
+
 	// Copio el pokemon "i" buscado del arrecife al acuario.
 	(*acuario).pokemon[(*acuario).cantidad_pokemon] = (*arrecife).pokemon[pos];
+
 	// Aumento la cantidad de pokemones del acuario, ya que añadí uno.
 	(*acuario).cantidad_pokemon++;
 
-	// Copio el último pokemon del arrecife a la posición que ya moví, y achico el arrecife en uno.
+	// Copio el pokemon de la última posición del arrecife, a la posición que ya moví al acuario.
 	(*arrecife).pokemon[pos] = (*arrecife).pokemon[((*arrecife).cantidad_pokemon)-1];
 
 	// Achico el vector de pokemones del arrecife.
@@ -177,12 +183,12 @@ int trasladar_pokemon(arrecife_t* arrecife, acuario_t* acuario,
 
 	bool hay_suficientes = hay_pokemones_suficientes(arrecife, seleccionar_pokemon, cant_seleccion, posiciones_buscadas);
 	if (!hay_suficientes)
-		return ERROR; ///////////// que devuelvo???? 0 o -1?
+		return ERROR;
 
-	size_t i = 0;
+	int i = (cant_seleccion-1);
 	bool operacion_exitosa = true;
 	pokemon_t* pokemon_aux;
-	while(i < cant_seleccion && operacion_exitosa) {
+	while(i >= 0 && operacion_exitosa) {
 	
 		pokemon_aux = realloc((*acuario).pokemon, sizeof(pokemon_t)*(size_t)((*acuario).cantidad_pokemon+1));
 		if (pokemon_aux == NULL) {
@@ -193,12 +199,51 @@ int trasladar_pokemon(arrecife_t* arrecife, acuario_t* acuario,
 
 			operacion_exitosa = mover_pokemon(arrecife, acuario, posiciones_buscadas[i]);
 			// Aummento el iterador de pokemones buscados.
-			i++;
+			i--;
 		}
 	}
 
 	if (!operacion_exitosa)
 		return ERROR;
+
+	return EXITO;
+}
+
+// FUNCIÓN PÚBLICA
+void censar_arrecife(arrecife_t* arrecife, void (*mostrar_pokemon)(pokemon_t*)) {
+	printf("\tEspecie\t         Velocidad\tPeso\t\tColor");
+	printf("\n\n");
+	for (int i = 0; i < (*arrecife).cantidad_pokemon; i++) {
+		mostrar_pokemon(&((*arrecife).pokemon[i]));
+	}
+}
+
+/*
+* Pre: El archivo debe estar abierto en modo ESCRITURA y ser de texto. El vector de 
+	pokemones debe ser válido, con todas sus estructuras válidas. La cantidad debe
+	ser > 0.
+* Post: Escribe en el archivo de texto recibido los pokemones con el formato 
+	FORMATO_ESCRITURA_ACUARIO. Escribe según la cantidad recibida.
+*/
+void escribir_pokemones(FILE* archivo, pokemon_t pokemones[], int cantidad_pokemones) {
+	for (int i = 0; i < cantidad_pokemones; i++) {
+		fprintf(archivo, FORMATO_ESCRITURA_ACUARIO, pokemones[i].especie, pokemones[i].velocidad, 
+			pokemones[i].peso, pokemones[i].color);
+	}
+}
+
+
+// FUNCIÓN PÚBLICA
+int guardar_datos_acuario(acuario_t* acuario, const char* nombre_archivo) {
+	
+	FILE* archivo = fopen(nombre_archivo, ESCRITURA);
+
+	if(archivo == NULL) {
+		return ERROR;
+	}
+	escribir_pokemones(archivo, (*acuario).pokemon, (*acuario).cantidad_pokemon);
+
+	fclose(archivo);
 
 	return EXITO;
 }
