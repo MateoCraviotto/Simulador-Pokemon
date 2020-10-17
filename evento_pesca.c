@@ -1,6 +1,7 @@
 #include "evento_pesca.h"
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #define LECTURA "r"
 #define ESCRITURA "w"
 const int SIN_POKEMONES = 0;
@@ -8,7 +9,9 @@ const int LEIDOS_ESPERADOS = 4;
 #define FORMATO_LECTURA_ARRECIFE "%[^;];%i;%i;%[^\n]\n"
 #define FORMATO_ESCRITURA_ACUARIO "%s;%i;%i;%s\n"
 
-const int ERROR = -1;
+#define SEPARADOR_EXTENSION '.'
+
+const int ERROR = -1; //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 const int EXITO = 0;
 const int UN_POKEMON = 1;
 
@@ -26,56 +29,85 @@ int leer_pokemones(FILE* archivo, arrecife_t* arrecife) {
 	int i = 0;
 	int leidos = fscanf(archivo, FORMATO_LECTURA_ARRECIFE, p.especie, &(p.velocidad), (&p.peso), p.color);
 
-	pokemon_t* pokemon_aux;
+	pokemon_t* pokemon_aux; // Variable auxiliar para reallocs
 	pokemon_aux = realloc((*arrecife).pokemon, sizeof(pokemon_t)*((size_t)i+1));
 	if (pokemon_aux == NULL)
 		return i;
-
+	// El realloc salió bien, actualizo la dirección de memoria.
 	(*arrecife).pokemon = pokemon_aux;
 	
 	bool realloc_exitoso = true;
-
 	while (leidos == LEIDOS_ESPERADOS && realloc_exitoso) {
+		
+		// Asigno el pokemon leído al vector de pokemones.
 		(*arrecife).pokemon[i] = p;
 		i++;
+
+		// Guardo memoria para el siguiente pokemon.
 		pokemon_aux = realloc(pokemon_aux, sizeof(pokemon_t)*((size_t)i+1));
-
 		if (pokemon_aux != NULL) {
-			
+			// Como pude guardar memoria, leo de nuevo y lo guardo en la variable auxiliar. 	
 			leidos = fscanf(archivo, FORMATO_LECTURA_ARRECIFE, p.especie, &(p.velocidad), (&p.peso), p.color);
-
+			// El realloc salió bien, actualizo la dirección de memoria.
 			(*arrecife).pokemon = pokemon_aux;
 		} else {
 			realloc_exitoso = false;
 		}
 	}
-
+	// Si salió con los realloc bien hechos, y más de un pokemon leído
 	if(i > 0 && realloc_exitoso)
-		(*arrecife).pokemon = pokemon_aux;
+		(*arrecife).pokemon = pokemon_aux; // actualizo la dirección de memoria.
 
 	printf("Hay %i pokemones antes.\n", i);////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	return i;
 }
 
+/*
+* Pre: La ruta debe tener extensión (tener un punto '.' que
+	separe la ruta de la extensión).
+* Post: Devuelve true si la ruta recibida corresponde a un archivo
+	de texto .txt, sino, devuelve false.
+*/
+bool es_archivo_txt(const char* ruta) {
+	while((*ruta) != SEPARADOR_EXTENSION) {
+		ruta++;
+	}
+	return (strcmp(ruta, ".txt") == 0);
+}
+
+/*
+* Pre: -
+* Post: Inicializa el arrecife recibido con los valores por defecto.
+*/
+void inicializar_arrecife(arrecife_t* arrecife) {
+	(*arrecife).pokemon = NULL;
+	(*arrecife).cantidad_pokemon = SIN_POKEMONES;
+}
+
 // FUNCIÓN PÚBLICA
 arrecife_t* crear_arrecife(const char* ruta_archivo) {
+	// Chequeo que el archivo sea .txt
+	if (!es_archivo_txt(ruta_archivo)) {
+		printf("Ese formato de archivo es inválido. El archivo debe ser un .txt\n");
+		return NULL;
+	}
 
 	FILE* archivo = fopen(ruta_archivo, LECTURA);
-
+	// Chequeo la correcta apertura del archivo.
 	if (archivo == NULL) {
 		printf("No se ha podido abrir el archivo.\n");
 		return NULL;
 	}
 
 	arrecife_t* p_arrecife = malloc(sizeof(arrecife_t));
+	// Chequeo que se haya reservado memoria para el arrecife correctamente.
 	if (p_arrecife == NULL) {
 		fclose(archivo);
 		printf("No se ha podido asignar memoria para el arrecife.\n");
 		return NULL;
 	}
 
-	(*p_arrecife).pokemon = NULL;
-	(*p_arrecife).cantidad_pokemon = 0;
+	inicializar_arrecife(p_arrecife);
 
 	(*p_arrecife).cantidad_pokemon = leer_pokemones(archivo, p_arrecife);
 	if ((*p_arrecife).cantidad_pokemon == SIN_POKEMONES) {
@@ -90,7 +122,14 @@ arrecife_t* crear_arrecife(const char* ruta_archivo) {
 	return p_arrecife;
 }
 
-
+/*
+* Pre: -
+* Post: Inicializa el arrecife recibido con los valores por defecto.
+*/
+void inicializar_acuario(acuario_t* acuario) {
+	(*acuario).pokemon = NULL;
+	(*acuario).cantidad_pokemon = SIN_POKEMONES;
+}
 
 //FUNCIÓN PÚBLICA
 acuario_t* crear_acuario() {
@@ -98,9 +137,8 @@ acuario_t* crear_acuario() {
 	acuario_t* acuario = malloc(sizeof(acuario_t));
 	if (acuario == NULL) 
 		return NULL;
+	inicializar_acuario(acuario);
 
-	(*acuario).pokemon = NULL;
-	(*acuario).cantidad_pokemon = 0;
 
 	return acuario;
 }
@@ -173,14 +211,14 @@ int trasladar_pokemon(arrecife_t* arrecife, acuario_t* acuario,
 	bool operacion_exitosa = true;
 	pokemon_t* pokemon_aux;
 	while(i >= 0 && operacion_exitosa) {
-	
+		// Guardo espacio en memoria para un pokemon más de los que ya hay.
 		pokemon_aux = realloc((*acuario).pokemon, sizeof(pokemon_t)*(size_t)((*acuario).cantidad_pokemon+1));
 		if (pokemon_aux == NULL) {
 			operacion_exitosa = false;
 		} else {
 			// Actualizo la dirección de memoria del acuario en caso de que haya cambiado.
 			(*acuario).pokemon = pokemon_aux;
-
+			// Muevo el pokemon al acuario.
 			operacion_exitosa = mover_pokemon(arrecife, acuario, posiciones_buscadas[i]);
 			// Aummento el iterador de pokemones buscados.
 			i--;

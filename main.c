@@ -133,7 +133,7 @@ int main() {
 
 	srand((unsigned)time(NULL));
 
-	arrecife_t* arrecife = crear_arrecife("arrecife.txt");
+	arrecife_t* arrecife = crear_arrecife("arrecife.txasas");
 
 	if (arrecife == NULL) {
 		printf("No se pudo crear el arrecife.\n");
