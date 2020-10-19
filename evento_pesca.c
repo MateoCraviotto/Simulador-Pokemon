@@ -4,23 +4,25 @@
 #include <string.h>
 #define LECTURA "r"
 #define ESCRITURA "w"
-const int SIN_POKEMONES = 0;
-const int LEIDOS_ESPERADOS = 4;
-#define FORMATO_LECTURA_ARRECIFE "%[^;];%i;%i;%[^\n]\n"
+#define SIN_POKEMONES 0
+#define LEIDOS_ESPERADOS 4
+#define FORMATO_LECTURA_ARRECIFE "%99[^;];%i;%i;%[^\n]\n"
 #define FORMATO_ESCRITURA_ACUARIO "%s;%i;%i;%s\n"
 
 #define SEPARADOR_EXTENSION '.'
+#define EXTENSION_REQUERIDA ".txt"
 
-const int ERROR = -1; //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-const int EXITO = 0;
-const int UN_POKEMON = 1;
+#define ERROR -1
+#define EXITO 0
+#define UN_POKEMON 1
 
 /*
 * Pre: El archivo debe estar abierto en modo LECTURA y ser de texto. El vector 
 	de pokemones no debe estar inicializado.
 * Post: Lee los pokemones del archivo, con el formato FORMATO_LECTURA_ARRECIFE, 
 	y los almacena  en el vector recibido. Devuelve la cantidad de pokemones leidos 
-	y almacenados en el vector. Si no pudo leer ninguno, devuelve 0.
+	y almacenados en el vector. Si no pudo leer ninguno, devuelve 0. Si hay algún
+	errror, devuelve ERROR (-1).
 */
 int leer_pokemones(FILE* archivo, arrecife_t* arrecife) {
 
@@ -28,6 +30,9 @@ int leer_pokemones(FILE* archivo, arrecife_t* arrecife) {
 
 	int i = 0;
 	int leidos = fscanf(archivo, FORMATO_LECTURA_ARRECIFE, p.especie, &(p.velocidad), (&p.peso), p.color);
+
+	if(leidos != LEIDOS_ESPERADOS)
+		return ERROR;
 
 	pokemon_t* pokemon_aux; // Variable auxiliar para reallocs
 	pokemon_aux = realloc((*arrecife).pokemon, sizeof(pokemon_t)*((size_t)i+1));
@@ -55,10 +60,9 @@ int leer_pokemones(FILE* archivo, arrecife_t* arrecife) {
 		}
 	}
 	// Si salió con los realloc bien hechos, y más de un pokemon leído
-	if(i > 0 && realloc_exitoso)
+	if(i > SIN_POKEMONES && realloc_exitoso)
 		(*arrecife).pokemon = pokemon_aux; // actualizo la dirección de memoria.
 
-	printf("Hay %i pokemones antes.\n", i);////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	return i;
 }
 
@@ -72,7 +76,7 @@ bool es_archivo_txt(const char* ruta) {
 	while((*ruta) != SEPARADOR_EXTENSION) {
 		ruta++;
 	}
-	return (strcmp(ruta, ".txt") == 0);
+	return (strcmp(ruta, EXTENSION_REQUERIDA) == 0);
 }
 
 /*
@@ -110,8 +114,8 @@ arrecife_t* crear_arrecife(const char* ruta_archivo) {
 	inicializar_arrecife(p_arrecife);
 
 	(*p_arrecife).cantidad_pokemon = leer_pokemones(archivo, p_arrecife);
-	if ((*p_arrecife).cantidad_pokemon == SIN_POKEMONES) {
-		liberar_arrecife(p_arrecife);//////////////////////////////////////////////////////////////////////////////////////////
+	if ((*p_arrecife).cantidad_pokemon == SIN_POKEMONES || (*p_arrecife).cantidad_pokemon == ERROR) {
+		liberar_arrecife(p_arrecife);
 		fclose(archivo);
 		printf("No se ha podido leer pokemones.\n");
 		return NULL;
@@ -137,15 +141,19 @@ acuario_t* crear_acuario() {
 	acuario_t* acuario = malloc(sizeof(acuario_t));
 	if (acuario == NULL) 
 		return NULL;
-	inicializar_acuario(acuario);
 
+	inicializar_acuario(acuario);
 
 	return acuario;
 }
 
 /*
-* Pre: ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-* Post:
+* Pre: El arreife recibido debe estar inicializado y ser válido, con todas sus estruturas válidas. 
+	cant_seleccion debe ser >= 0. El vector de posiciones_pokemones debe estar vacío, y la función 
+	recibida debe ser válida. 
+* Post: Guarda en el vector posiciones_pokemones las posiiones de los pokemones que cumplen la 
+	condición dada por la función seleccionar_pokemon. Devuelve true si hay pokemones suficientes
+	en el arrecife según la cant_seleccion recibida. Si no hay suficientes, devuelve false.
 */
 bool hay_pokemones_suficientes(arrecife_t* arrecife, bool (*seleccionar_pokemon) (pokemon_t*), 
 	int cant_seleccion, int posiciones_pokemones[]) {
@@ -164,8 +172,8 @@ bool hay_pokemones_suficientes(arrecife_t* arrecife, bool (*seleccionar_pokemon)
 
 /*
 * Pre: El arrecife y el acuario deben estar inicializados y ser válidos. "pos" representa
-	la posición del pokemon en el arrecife que se quiere mover.////////////////////////////////////////////////////////////////////////////////////////////////////////
-* Post: Mueve el pokemon de la posición del arrecife recibida al acuario. Si lo logra, devuelve/////////////////////////////////////////////////////////////////
+	la posición del pokemon en el arrecife que se quiere mover.
+* Post: Mueve el pokemon de la posición del arrecife recibida al acuario. Si lo logra, devuelve
 	true. En caso de error, devuelve false.
 */
 bool mover_pokemon(arrecife_t* arrecife, acuario_t* acuario, int pos) {
@@ -210,7 +218,7 @@ int trasladar_pokemon(arrecife_t* arrecife, acuario_t* acuario,
 	int i = (cant_seleccion-1);
 	bool operacion_exitosa = true;
 	pokemon_t* pokemon_aux;
-	while(i >= 0 && operacion_exitosa) {
+	while(i >= SIN_POKEMONES && operacion_exitosa) {
 		// Guardo espacio en memoria para un pokemon más de los que ya hay.
 		pokemon_aux = realloc((*acuario).pokemon, sizeof(pokemon_t)*(size_t)((*acuario).cantidad_pokemon+1));
 		if (pokemon_aux == NULL) {
@@ -236,7 +244,7 @@ void censar_arrecife(arrecife_t* arrecife, void (*mostrar_pokemon)(pokemon_t*)) 
 		printf("\nNo quedan más pokemones en el arrecife! No se pudieron preservar las especies.\n");
 	} else {
 		printf("Hay %i pokemon(es).\n\n", (*arrecife).cantidad_pokemon);
-		printf("\tEspecie\t         Velocidad\tPeso\t\tColor");
+		printf("\tEspecie\t         Velocidad\tPeso\t\tColor|");
 		printf("\n\n");
 		for (int i = 0; i < (*arrecife).cantidad_pokemon; i++) {
 			mostrar_pokemon(&((*arrecife).pokemon[i]));
