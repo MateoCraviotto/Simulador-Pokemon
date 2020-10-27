@@ -58,7 +58,7 @@ Siendo estos los archivos de arrecife y acuario que el usuario desee utilizar, r
 
 ### 1. **Punteros**
 </br> 
-Un puntero es un tipo de dato de 8 bits (1 byte) que su valor es o apunta a una dirección de memoria de la computadora. Un puntero se puede desreferenciar, obteniendo
+Un puntero es un tipo de dato cuyo tamaño es 4 bytes, en el caso de una arquitectura de 32 bits, u 8bytes, en una arquitectura de 64 bits. Su valor es o apunta a una dirección de memoria de la computadora. Un puntero se puede desreferenciar, obteniendo
 así el valor de la variable almacenada en la dirección de memoria a la que apunta. Esto se realiza con el operador (*). Para declarar en C un puntero a, por ejemplo, un entero se usa:
 `int* puntero_a_entero;`
 Se dice que este puntero es de tipo de dato "int pointer", o que apunta a un entero.</br></br>
